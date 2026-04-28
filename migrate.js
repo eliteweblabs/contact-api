@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS contacts (
   phone        TEXT,
   company      TEXT,
   notes        TEXT,
+  priority    INTEGER DEFAULT 500,
+  status      TEXT DEFAULT 'active',
   archived     BOOLEAN DEFAULT FALSE,
   created_at   TIMESTAMPTZ DEFAULT NOW(),
   updated_at   TIMESTAMPTZ DEFAULT NOW()
