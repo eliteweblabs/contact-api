@@ -51,6 +51,8 @@ CREATE INDEX IF NOT EXISTS idx_contacts_last_trgm   ON contacts USING gin(last_n
 CREATE INDEX IF NOT EXISTS idx_aliases_value_trgm   ON contact_aliases USING gin(value gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_aliases_field_value   ON contact_aliases(field, lower(value));
 CREATE INDEX IF NOT EXISTS idx_links_system          ON contact_links(system, external_id);
+
+UPDATE contacts SET archived = false WHERE archived IS NULL;
 `;
 
 async function run() {

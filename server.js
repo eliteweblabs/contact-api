@@ -289,9 +289,15 @@ app.get('/api/contacts', async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit || '50', 10), 200);
     const offset = parseInt(req.query.offset || '0', 10);
 
-    let where = 'archived = $1';
-    const params = [archived === 'true'];
-    let paramIdx = 2;
+    let where;
+    const params = [];
+    let paramIdx = 1;
+
+    if (archived === 'true') {
+      where = 'archived = true';
+    } else {
+      where = '(archived IS NOT TRUE)';
+    }
 
     if (q) {
       where += ` AND (similarity(name, $${paramIdx}) > 0.2 OR lower(email) LIKE lower($${paramIdx + 1}))`;
@@ -484,16 +490,34 @@ app.get('/api/contacts/:uid/links', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// DELETE /api/contacts/:uid — soft archive
+// DELETE /api/contacts/:uid — soft archive (default) or permanent delete (?permanent=true)
 // ---------------------------------------------------------------------------
 app.delete('/api/contacts/:uid', async (req, res) => {
   try {
+    const uid = req.params.uid;
+    const permanent = req.query.permanent === 'true';
+
+    if (permanent) {
+      const r = await pool.query('DELETE FROM contacts WHERE uid = $1 RETURNING uid', [uid]);
+      if (r.rows.length === 0) return res.status(404).json({ error: 'Contact not found' });
+      return res.json({ success: true, message: 'Contact permanently deleted' });
+    }
+
     const r = await pool.query(
-      'UPDATE contacts SET archived = true, updated_at = NOW() WHERE uid = $1 AND archived = false RETURNING uid',
-      [req.params.uid]
+      'UPDATE contacts SET archived = true, updated_at = NOW() WHERE uid = $1 AND (archived IS NOT TRUE) RETURNING uid',
+      [uid]
     );
-    if (r.rows.length === 0) return res.status(404).json({ error: 'Contact not found or already archived' });
-    res.json({ success: true, message: 'Contact archived' });
+    if (r.rows.length > 0) {
+      return res.json({ success: true, message: 'Contact archived' });
+    }
+
+    const check = await pool.query('SELECT uid, archived FROM contacts WHERE uid = $1', [uid]);
+    if (check.rows.length === 0) return res.status(404).json({ error: 'Contact not found' });
+    if (check.rows[0].archived === true) {
+      return res.json({ success: true, message: 'Contact already archived', already_archived: true });
+    }
+
+    return res.status(404).json({ error: 'Contact not found or already archived' });
   } catch (e) {
     console.error('[Delete Error]', e);
     res.status(500).json({ error: 'Failed to archive contact' });
