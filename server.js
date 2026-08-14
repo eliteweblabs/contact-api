@@ -1,5 +1,6 @@
 const express = require('express');
 const { Pool } = require('pg');
+const { ensureSchema } = require('./migrate');
 
 const app = express();
 app.use(express.json());
@@ -533,8 +534,21 @@ app.use((_req, res) => res.status(404).json({ error: 'Not found' }));
 // Start
 // ---------------------------------------------------------------------------
 const port = process.env.PORT || 3000;
-app.listen(port, () => {
-  console.log(`[${APP_NAME}] Running on port ${port}`);
-  console.log(`[${APP_NAME}] Fuzzy thresholds: exact=${FUZZY_EXACT} possible=${FUZZY_POSSIBLE}`);
-  if (API_KEY) console.log(`[${APP_NAME}] API key auth enabled`);
-});
+
+async function start() {
+  try {
+    await ensureSchema(pool);
+    console.log(`[${APP_NAME}] Schema ready`);
+  } catch (e) {
+    console.error(`[${APP_NAME}] Schema migration failed:`, e.message);
+    process.exit(1);
+  }
+
+  app.listen(port, () => {
+    console.log(`[${APP_NAME}] Running on port ${port}`);
+    console.log(`[${APP_NAME}] Fuzzy thresholds: exact=${FUZZY_EXACT} possible=${FUZZY_POSSIBLE}`);
+    if (API_KEY) console.log(`[${APP_NAME}] API key auth enabled`);
+  });
+}
+
+start();

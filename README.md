@@ -60,10 +60,14 @@ Name matching uses both full name and weighted first/last components (last name 
 2. Create a new Railway service → connect the repo
 3. Add a Postgres database to the project
 4. Set `DATABASE_URL` to the Postgres connection string
-5. Run the migration: `npm run migrate` (or set as a pre-deploy command)
+5. Set `DATABASE_URL` to that Postgres service (private URL is fine)
 6. Optionally generate a public domain or keep it internal-only
 
+The process applies the schema on every boot (`CREATE TABLE IF NOT EXISTS`). Do not treat `npm run migrate` as a separate deploy step — if `/health` is up but `/api/contacts` returns 500 with `relation "contacts" does not exist`, the service is on an old image that does not self-migrate. Redeploy from this repo.
+
 ## Run Migration
+
+`npm start` / `node server.js` already runs the schema before listening. A one-off is still available:
 
 ```bash
 DATABASE_URL=your_connection_string npm run migrate

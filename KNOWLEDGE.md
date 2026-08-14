@@ -61,6 +61,10 @@ Each contact can be linked to IDs in other systems:
 
 These links let the agent trace one human across every connected platform.
 
+## Schema
+
+The service creates `contacts`, `contact_aliases`, and `contact_links` on boot. Do not run a separate migrate step on Railway. If list/resolve 500 with `relation "contacts" does not exist`, redeploy from `eliteweblabs/contact-api` `main`.
+
 ## Environment Variables
 
 | Var | Purpose |

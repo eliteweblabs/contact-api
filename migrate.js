@@ -1,11 +1,6 @@
 const { Pool } = require('pg');
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL?.includes('localhost') ? false : { rejectUnauthorized: false },
-});
-
-const migration = `
+const SCHEMA_SQL = `
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
@@ -55,10 +50,19 @@ CREATE INDEX IF NOT EXISTS idx_links_system          ON contact_links(system, ex
 UPDATE contacts SET archived = false WHERE archived IS NULL;
 `;
 
-async function run() {
+async function ensureSchema(pool) {
+  await pool.query(SCHEMA_SQL);
+}
+
+async function runCli() {
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.DATABASE_URL?.includes('localhost') ? false : { rejectUnauthorized: false },
+  });
+
   console.log('[migrate] Running schema migration...');
   try {
-    await pool.query(migration);
+    await ensureSchema(pool);
     console.log('[migrate] Done.');
   } catch (e) {
     console.error('[migrate] Error:', e.message);
@@ -68,4 +72,8 @@ async function run() {
   }
 }
 
-run();
+if (require.main === module) {
+  runCli();
+}
+
+module.exports = { ensureSchema, SCHEMA_SQL };
