@@ -3,7 +3,9 @@ const { Pool } = require('pg');
 const { ensureSchema } = require('./migrate');
 
 const app = express();
-app.use(express.json());
+// Portal metadata can include base64 logo/icon bytes (up to 2 MB each).
+// Express defaults to 100kb, which rejects those saves with "Payload Too Large".
+app.use(express.json({ limit: '15mb' }));
 
 // ---------------------------------------------------------------------------
 // Config
@@ -301,9 +303,9 @@ app.get('/api/contacts', async (req, res) => {
     }
 
     if (q) {
-      where += ` AND (similarity(name, $${paramIdx}) > 0.2 OR lower(email) LIKE lower($${paramIdx + 1}))`;
-      params.push(q, `%${q}%`);
-      paramIdx += 2;
+      where += ` AND (similarity(name, $${paramIdx}) > 0.2 OR name ILIKE $${paramIdx + 2} OR lower(email) LIKE lower($${paramIdx + 1}))`;
+      params.push(q, `%${q}%`, `%${q}%`);
+      paramIdx += 3;
     }
     if (email) {
       where += ` AND lower(email) = lower($${paramIdx})`;
